@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Previsão do Tempo + IBGE</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.css">
+<style>
+  :root {
+    --primary-color: #4CAF50;
+    --secondary-color: #2c3e50;
+    --text-color: #333;
+    --light-gray: #f5f5f5;
+    --white: #ffffff;
+    --border-radius: 8px;
+    --box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  }
+  
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-color: var(--light-gray);
+    color: var(--text-color);
+    line-height: 1.6;
+  }
+  
+  .main-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    min-height: 100vh;
+  }
+  
+  h2 {
+    color: var(--secondary-color);
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  
+  .top-section {
+    display: flex;
+    gap: 30px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+  }
+  
+  .form-section {
+    background: var(--white);
+    padding: 25px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    flex: 1;
+    min-width: 300px;
+  }
+  
+  .current-weather {
+    background: var(--white);
+    padding: 25px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    flex: 2;
+    min-width: 300px;
+  }
+  
+  .bottom-section {
+    background: var(--white);
+    padding: 25px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    margin-top: 20px;
+  }
+  
+  .form-group {
+    margin-bottom: 20px;
+  }
+  
+  label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--secondary-color);
+  }
+  
+  input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: var(--border-radius);
+    font-size: 16px;
+    box-sizing: border-box;
+  }
+  
+  .button-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  
+  button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: var(--border-radius);
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    width: 100%;
+    max-width: 300px;
+  }
+  
+  button:hover {
+    background-color: #45a049;
+  }
+  
+  .suggestions {
+    border: 1px solid #ddd;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 5px;
+    border-radius: var(--border-radius);
+    display: none;
+  }
+  
+  .suggestions div {
+    padding: 10px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .suggestions div:hover {
+    background-color: #f0f0f0;
+  }
+  
+  .weather-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+  }
+  
+  .weather-icon {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .weather-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+  }
+  
+  .weather-detail {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background: rgba(76, 175, 80, 0.1);
+    border-radius: var(--border-radius);
+  }
+  
+  .weather-detail span {
+    margin-left: 10px;
+  }
+  
+  .hourly-forecast {
+    margin-top: 30px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .hourly-header {
+    margin-bottom: 15px;
+    text-align: center;
+    width: 100%;
+  }
+  
+  .hourly-container {
+    display: flex;
+    gap: 15px;
+    overflow-x: auto;
+    padding-bottom: 15px;
+    justify-content: center;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  
+  .hourly-item {
+    min-width: 70px;
+    text-align: center;
+    padding: 10px;
+    background: rgba(76, 175, 80, 0.1);
+    border-radius: var(--border-radius);
+    flex-shrink: 0;
+  }
+  .hourly-time {
+    font-weight: 600;
+    margin-bottom: 5px;
+  }
+  
+  .hourly-temp {
+    font-size: 18px;
+    font-weight: bold;
+    margin: 5px 0;
+  }
+  
+  .hourly-icon {
+    width: 50px;
+    height: 50px;
+    margin: 0 auto;
+  }
+  
+  .chart-container {
+    margin-top: 40px;
+    position: relative;
+    height: 400px;
+    width: 100%;
+  }
+  
+  @media (max-width: 768px) {
+    .top-section {
+      flex-direction: column;
+    }
+    
+    .weather-details {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="main-container">
+  <h2>Previsão do Tempo</h2>
+  
+  <div class="top-section">
+    <div class="form-section">
+      <div class="form-group">
+        <label for="cidade">Digite a cidade:</label>
+        <input type="text" id="cidade" placeholder="Ex: Niterói" autocomplete="off">
+        <div class="suggestions" id="suggestions"></div>
+      </div>
+      
+      <div class="button-container">
+        <button onclick="buscarClima()">Buscar Clima</button>
+      </div>
+    </div>
+    
+    <div class="current-weather" id="current-weather">
+      <p style="text-align: center; color: #666;">Busque uma cidade para ver o clima atual</p>
+    </div>
+  </div>
+  
+  <div class="bottom-section">
+    <div id="hourly-forecast">
+      <p style="text-align: center; color: #666;">A previsão horária aparecerá aqui</p>
+    </div>
+    
+    <div class="chart-container">
+      <canvas id="temperatureChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+<script>
+// Variáveis globais
+let cidades = [];
+let weatherChart = null;
+
+// Carregar lista de cidades do IBGE
+fetch('https://servicodados.ibge.gov.br/api/v1/localidades/municipios')
+  .then(res => res.json())
+  .then(data => {
+    cidades = data.map(c => c.nome);
+  })
+  .catch(err => console.error('Erro ao carregar cidades:', err));
+
+// Elementos DOM
+const input = document.getElementById('cidade');
+const suggestions = document.getElementById('suggestions');
+
+// Evento de input para autocompletar
+input.addEventListener('input', function() {
+  const texto = this.value.toLowerCase();
+  suggestions.innerHTML = '';
+  suggestions.style.display = 'none';
+  
+  if (texto.length < 2) return;
+  
+  const filtradas = cidades.filter(cidade => 
+    cidade.toLowerCase().includes(texto)
+  ).slice(0, 8);
+  
+  if (filtradas.length > 0) {
+    filtradas.forEach(cidade => {
+      const div = document.createElement('div');
+      div.textContent = cidade;
+      div.onclick = () => {
+        input.value = cidade;
+        suggestions.style.display = 'none';
+      };
+      suggestions.appendChild(div);
+    });
+    suggestions.style.display = 'block';
+  }
+});
+
+// Fechar sugestões ao clicar fora
+document.addEventListener('click', function(e) {
+  if (e.target !== input) {
+    suggestions.style.display = 'none';
+  }
+});
+
+// Função principal para buscar clima
+async function buscarClima() {
+  const cidade = input.value.trim();
+  if (!cidade) {
+    alert('Por favor, digite uma cidade válida');
+    return;
+  }
+  
+  try {
+    // Mostrar loading
+    document.getElementById('current-weather').innerHTML = '<p style="text-align: center;">Carregando...</p>';
+    document.getElementById('hourly-forecast').innerHTML = '<p style="text-align: center;">Carregando...</p>';
+    
+    // Buscar dados atuais e previsão horária simultaneamente
+    const [currentRes, hourlyRes] = await Promise.all([
+      fetch(`/clima/${encodeURIComponent(cidade)}`),
+      fetch(`/clima-horario/${encodeURIComponent(cidade)}`)
+    ]);
+    
+    const currentData = await currentRes.json();
+    const hourlyData = await hourlyRes.json();
+    
+    if (currentData.erro || hourlyData.erro) {
+      throw new Error(currentData.erro || hourlyData.erro);
+    }
+    
+    exibirResultados(currentData, hourlyData);
+  } catch (error) {
+    console.error('Erro:', error);
+    document.getElementById('current-weather').innerHTML = `
+      <p style="color: #d32f2f;">Erro ao buscar dados: ${error.message || 'Cidade não encontrada'}</p>`;
+    document.getElementById('hourly-forecast').innerHTML = '';
+  }
+}
+
+// Exibir resultados na tela
+function exibirResultados(current, hourly) {
+  // Criar HTML para dados atuais
+  const currentHtml = `
+    <div class="weather-current">
+      <div class="weather-header">
+        <h3>Clima em ${current.cidade}, ${current.pais}</h3>
+        <img src="https://openweathermap.org/img/wn/${current.icon}@2x.png" 
+             alt="${current.descricao}" class="weather-icon">
+      </div>
+      
+      <div class="weather-details">
+        <div class="weather-detail">
+          <span>🌡️</span>
+          <span><strong>Temperatura:</strong> ${current.temperatura}</span>
+        </div>
+        
+        <div class="weather-detail">
+          <span>🤗</span>
+          <span><strong>Sensação Térmica:</strong> ${current.sensacao}</span>
+        </div>
+        
+        <div class="weather-detail">
+          <span>💧</span>
+          <span><strong>Umidade:</strong> ${current.umidade}</span>
+        </div>`;
+  
+  // Criar HTML para previsão horária
+  const hourlyHtml = `
+    <div class="hourly-forecast">
+      <div class="hourly-header">
+        <h3>Previsão Horária</h3>
+      </div>
+      
+      <div class="hourly-container">
+        ${hourly.map(item => `
+          <div class="hourly-item">
+            <div class="hourly-time">${item.hora}</div>
+            <div class="hourly-temp">${item.temp}°</div>
+            <img src="https://openweathermap.org/img/wn/${item.icon}.png" 
+                 alt="${item.descricao}" class="hourly-icon">
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+  
+  // Atualizar o DOM
+  document.getElementById('current-weather').innerHTML = currentHtml;
+  document.getElementById('hourly-forecast').innerHTML = hourlyHtml;
+  
+  // Criar gráfico de temperatura
+  criarGraficoTemperatura(hourly);
+}
+
+// Criar gráfico com Chart.js
+function criarGraficoTemperatura(hourlyData) {
+  const ctx = document.getElementById('temperatureChart').getContext('2d');
+  
+  // Destruir gráfico anterior se existir
+  if (weatherChart) {
+    weatherChart.destroy();
+  }
+  
+  weatherChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: hourlyData.map(item => item.hora),
+      datasets: [{
+        label: 'Temperatura (°C)',
+        data: hourlyData.map(item => item.temp),
+        borderColor: '#4CAF50',
+        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+        borderWidth: 2,
+        tension: 0.4,
+        fill: true,
+        pointBackgroundColor: '#4CAF50',
+        pointRadius: 4,
+        pointHoverRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return `Temperatura: ${context.raw}°C`;
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: false,
+          title: {
+            display: true,
+            text: 'Temperatura (°C)'
+          }
+        },
+        x: {
+          grid: {
+            display: false
+          }
+        }
+      }
+    }
+  });
+}
+
+// Limpar input quando a página carrega
+document.addEventListener('DOMContentLoaded', function() {
+  input.value = '';
+  input.focus();
+});
+</script>
+</body>
+</html>
